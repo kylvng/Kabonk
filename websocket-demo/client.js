@@ -5,6 +5,11 @@ const readline = require("readline");
 const rl = readline.createInterface({ input : process.stdin });
 
 const user =  process.argv[2];
+const roomCode = process.argv[3];
+
+if (!user || !roomCode) {
+    process.exit(1);
+}
 
 rl.on("line", (line) => {
     socket.emit("chat", {user: user, text: line});
@@ -12,6 +17,7 @@ rl.on("line", (line) => {
 
 socket.on("connect", () => {
     console.log("Connected to server with ID:", socket.id);
+    socket.emit("join-room", { roomCode, user });
     });
 
 socket.on("chat", (msg) => {
