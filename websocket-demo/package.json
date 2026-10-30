@@ -1,0 +1,15 @@
+{
+  "name": "kabonk-websocket-demo",
+  "version": "1.0.0",
+  "description": "Small Socket.IO demo",
+  "main": "server.js",
+  "scripts": {
+    "server": "node server.js",
+    "client": "node client.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1"
+  }
+}
