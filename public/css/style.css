@@ -1,0 +1,135 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #1b1a2e;
+    color: white;
+    text-align: center;
+  }
+  
+  /* home screen */
+  #home {
+    padding-top: 150px;
+  }
+  
+  #title {
+    font-size: 90px;
+    color: #ff6b3d;
+    margin-bottom: 40px;
+  }
+  
+  #menu {
+    width: 280px;
+    margin: 0 auto;
+  }
+  
+  /* buttons */
+  button {
+    font-size: 18px;
+    font-weight: bold;
+    padding: 14px;
+    border: 2px solid #35345a;
+    border-radius: 14px;
+    background-color: #35345a;
+    color: white;
+    cursor: pointer;
+  }
+  
+  button:hover {
+    background-color: #43416e;
+  }
+  
+  /* buttons that can't be clicked yet are faded */
+  button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  
+  /* three menu buttons stack on top of each other */
+  #menu button {
+    display: block;
+    width: 100%;
+    margin-bottom: 14px;
+  }
+  
+  #create-room-button {
+    background-color: #ff6b3d;
+    border-color: #ff6b3d;
+  }
+  
+  #how-to-play-button {
+    background-color: #1b1a2e;
+  }
+  
+  /* this whole section is for popups */
+  
+  /* dim the background */ 
+  .popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+  }
+  
+  /* pop-up box */
+  .popup-box {
+    position: relative;
+    width: 400px;
+    margin: 100px auto;
+    padding: 30px;
+    background-color: #2a2944;
+    border-radius: 20px;
+  }
+  
+  /* X */
+  .close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 6px 12px;
+    border-color: #2a2944;
+    background-color: #2a2944;
+  }
+  
+  /* create and join button */
+  .big-button {
+    width: 100%;
+    margin-top: 20px;
+    background-color: #ff6b3d;
+    border-color: #ff6b3d;
+  }
+  
+  /* create room */
+  .mode {
+    width: 45%;
+    margin: 5px;
+  }
+  
+  /* yellow border on the chosen mode */
+  .selected {
+    border-color: #ffd23f;
+  }
+  
+  /* join room */
+  label {
+    display: block;
+    margin-bottom: 8px;
+  }
+  
+  #room-code-input {
+    width: 90%;
+    padding: 14px;
+    font-size: 18px;
+    border-radius: 14px;
+  }
+  
+  #join-error {
+    color: #ff5c7a;
+  }
+  
+  /* how to play */
+  ol {
+    text-align: left;
+    line-height: 1.6;
+  }
