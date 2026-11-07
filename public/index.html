@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kabonk!</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- home screen -->
+  <div id="home">
+    <h1 id="title">Kabonk!</h1>
+
+    <div id="menu">
+      <button id="create-room-button">Create Room</button>
+      <button id="join-room-button">Join Room</button>
+      <button id="how-to-play-button">How to Play</button>
+    </div>
+  </div>
+
+
+  <!-- create room pop-up -->
+  <div class="popup" id="create-room-modal" hidden>
+    <div class="popup-box">
+      <button class="close-button" id="create-room-close">X</button>
+      <h2>Create Room</h2>
+      <p>Choose a game mode</p>
+
+      <div id="mode-grid">
+        <button class="mode selected">Word Bomb</button>
+        <button class="mode">Math</button>
+        <button class="mode" disabled>Coming Soon</button>
+        <button class="mode" disabled>Coming Soon</button>
+      </div>
+
+      <button class="big-button" id="create-button">Create</button>
+    </div>
+  </div>
+
+
+  <!-- join room pop-up -->
+  <div class="popup" id="join-room-modal" hidden>
+    <div class="popup-box">
+      <button class="close-button" id="join-room-close">X</button>
+      <h2>Join Room</h2>
+      <p>Enter the room code from your host</p>
+
+      <label for="room-code-input">Room code</label>
+      <input id="room-code-input" type="text" placeholder="e.g. abcdef">
+
+      <p id="join-error" hidden>The following room does not exist</p>
+
+      <button class="big-button" id="join-button">Join</button>
+    </div>
+  </div>
+
+
+  <!-- how to play pop-up -->
+  <div class="popup" id="how-to-play-modal" hidden>
+    <div class="popup-box">
+      <button class="close-button" id="how-to-play-close">X</button>
+      <h2>How to Play</h2>
+
+      <ol>
+        <li>Create a room and share the code, or join a friend's room.</li>
+        <li>When it's your turn, a group of letters appears (like STR).</li>
+        <li>Type a real word that contains those letters (like STRING) before the bomb explodes.</li>
+        <li>Words can't be repeated until someone loses a life.</li>
+        <li>The bomb gets faster each turn. If the timer runs and the bomb explodes, you lose a heart.</li>
+        <li>Lose all your hearts and you spectate. Last player standing wins!</li>
+      </ol>
+    </div>
+  </div>
+
+  <script src="js/main.js"></script>
+
+</body>
+</html>
