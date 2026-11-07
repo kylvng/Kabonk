@@ -1,5 +1,5 @@
 const params = new URLSearchParams(window.location.search);
-const name = (params.get("name") || "").trim().slice(0, 20);
+const playerName = (params.get("name") || "").trim().slice(0, 20);
 const mode = params.get("mode");
 let roomCode = mode === "create" ? "" : (params.get("code") || "").trim().toUpperCase();
 
@@ -18,9 +18,9 @@ if (!canOpenRoom) {
 
     socket.on("connect", () => {
         if (roomCode) {
-            socket.emit("join-room", { playerId, name, roomCode });
+            socket.emit("join-room", { playerId, name: playerName, roomCode });
         } else {
-            socket.emit("create-room", { playerId, name });
+            socket.emit("create-room", { playerId, name: playerName });
         }
     });
 
