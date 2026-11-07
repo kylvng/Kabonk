@@ -7,8 +7,9 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "test": "node --test game/",
+    "start": "node server.js",
+    "prompts": "node game/generatePrompts.js"
   },
   "repository": {
     "type": "git",
@@ -22,6 +23,7 @@
   },
   "homepage": "https://github.com/kylvng/Kabonk#readme",
   "dependencies": {
+    "an-array-of-english-words": "^2.0.0",
     "express": "^5.3.0",
     "socket.io": "^4.8.4"
   }

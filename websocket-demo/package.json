@@ -5,12 +5,9 @@
   "main": "server.js",
   "scripts": {
     "server": "node server.js",
-    "client": "node client.js",
-    "test": "node --test",
-    "prompts": "node game/generatePrompts.js"
+    "client": "node client.js"
   },
   "dependencies": {
-    "an-array-of-english-words": "^2.0.0",
     "express": "^4.21.2",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1"
