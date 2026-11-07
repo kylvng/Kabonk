@@ -138,6 +138,33 @@ io.on('connection', (socket) => {
         socket.data.playerId= undefined;
 
     });
+
+    socket.on("start-game", () => {
+        const code = socket.data.roomCode;
+        const playerId = socket.data.playerId;
+        const room = rooms.get(code);
+
+        if (!room) {
+            return;
+        }
+
+        if (room.hostId !== playerId) {
+            socket.emit("start-error", { message: "Only the host can start the game" });
+            return;
+        }
+
+        if (room.players.length < 2) {
+            socket.emit("start-error", { message: "Need at least 2 players to start" });
+            return;
+        }
+
+        if (room.status === "playing") {
+            return;
+        }
+
+        room.status = "playing";
+        io.to(code).emit("room-update", room);
+    });
     
     socket.on("disconnect", (reason) => {
         console.log(`User disconnected on ${socket.id}, reason: ${reason}`);
