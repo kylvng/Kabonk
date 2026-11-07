@@ -15,7 +15,6 @@ app.use(express.static(path.join(__dirname, "public")));
 const rooms = new Map();
 
 // create room code
-
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 function randomCode() {
@@ -25,7 +24,6 @@ function randomCode() {
     }
     return code;
 }
-
 function makeRoomCode(){
     let code = randomCode();
     while (rooms.has(code)){
@@ -45,7 +43,7 @@ io.on('connection', (socket) => {
 
         const code = makeRoomCode();
         const room = {
-            code,
+            code: code,
             hostId: playerId,
             status: "lobby",
             players: [{
@@ -63,18 +61,44 @@ io.on('connection', (socket) => {
         io.to(code).emit("room-update", room);
     })
 
-    socket.on("join-room", ({ roomCode, user }) => {
-        if (!roomCode) return;
+    socket.on("join-room", ({ roomCode, playerId, name}) => {
+        if (!roomCode || !playerId || !name){
+            return;
+        }
 
-        socket.join(roomCode);
-        socket.data.roomCode = roomCode;
+        const code = roomCode.toUpperCase();
+        const room = rooms.get(code);
 
-        console.log(`${user} joined room ${roomCode}`);
+        if (!room){
+            socket.emit("join-error", {message: "The following room does not exist"});
+            return;
+        }
 
-        io.to(roomCode).emit("chat", {
-            user: "System",
-            text: `${user} joined the room`
-        });
+        const existing = room.players.find(p => p.id === playerId);
+
+        if (existing){
+            existing.socketId = socket.id;
+        }
+        else{
+            if (room.players.length >= 8){
+                socket.emit("join-error", {message: "The existing room is full"});
+                return;
+            }
+            const player = {
+                id: playerId,
+                name: name,
+                socketId: socket.id,
+                spectating: room.status === "playing"
+            };
+
+            room.players.push(player);
+        }
+
+        socket.join(code);
+        socket.data.roomCode = code;
+        socket.data.playerId = playerId;
+
+        io.to(code).emit("room-update", room);
     });
     
     socket.on("disconnect", (reason) => {
