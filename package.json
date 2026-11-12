@@ -7,7 +7,7 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "node --test game/",
+    "test": "node --test tests/",
     "start": "node server.js",
     "prompts": "node game/generatePrompts.js"
   },
