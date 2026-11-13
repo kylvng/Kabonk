@@ -1,2 +1,3 @@
 node_modules/
 game/.datamuse-counts.json
+.DS_Store
