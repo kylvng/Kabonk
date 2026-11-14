@@ -13,6 +13,7 @@ const io = new Server(server);
 app.use(express.static(path.join(__dirname, "public")));
 
 const { rooms, makeRoomCode, leaveRoom } = require("./game/rooms");
+const { startGame } = require("./game/gameLoop");
 
 io.on('connection', (socket) => {
     console.log(`User connect on socket ${socket.id}`);
@@ -25,7 +26,7 @@ io.on('connection', (socket) => {
 
         const code = makeRoomCode();
         const room = {
-            code: code,
+            code,
             hostId: playerId,
             status: "lobby",
             players: [{
@@ -68,7 +69,7 @@ io.on('connection', (socket) => {
             }
             const player = {
                 id: playerId,
-                name: name,
+                name,
                 socketId: socket.id,
                 spectating: room.status === "playing"
             };
@@ -117,6 +118,7 @@ io.on('connection', (socket) => {
 
         room.status = "playing";
         io.to(code).emit("room-update", room);
+        startGame(io, room);
     });
     
     socket.on("disconnect", (reason) => {
