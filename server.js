@@ -32,10 +32,25 @@ function makeRoomCode() {
     return code;
 }
 
+function normalizeRoomCode(value) {
+    if (typeof value !== "string") return "";
+    const code = value.trim().toUpperCase();
+    return /^[A-Z]{4}$/.test(code) ? code : "";
+}
+
+function isValidPlayer(playerId, name) {
+    return typeof playerId === "string" && playerId.trim().length > 0 &&
+        typeof name === "string" && name.trim().length > 0 && name.trim().length <= 20;
+}
+
 function leaveRoom(socket) {
     const code = socket.data.roomCode;
     const playerId = socket.data.playerId;
     const room = rooms.get(code);
+
+    if (code) socket.leave(code);
+    socket.data.roomCode = undefined;
+    socket.data.playerId = undefined;
 
     if (!room) {
         return;
@@ -65,11 +80,14 @@ io.on('connection', (socket) => {
     console.log(`User connect on socket ${socket.id}`);
 
 
-    socket.on("create-room", ({ playerId, name }) => {
-        if (!playerId || !name) {
+    socket.on("create-room", (details) => {
+        const { playerId, name } = details || {};
+        if (!isValidPlayer(playerId, name)) {
+            socket.emit("join-error", { message: "Enter a name between 1 and 20 characters." });
             return;
         }
 
+        leaveRoom(socket);
         const code = makeRoomCode();
         const room = {
             code: code,
@@ -77,7 +95,7 @@ io.on('connection', (socket) => {
             status: "lobby",
             players: [{
                 id: playerId,
-                name,
+                name: name.trim(),
                 socketId: socket.id
             }]
         };
@@ -91,8 +109,13 @@ io.on('connection', (socket) => {
     })
 
     // checks if a room can be joined
-    socket.on("check-room", ({ roomCode }) => {
-        const room = rooms.get((roomCode || "").toUpperCase());
+    socket.on("check-room", (details) => {
+        const code = normalizeRoomCode(details?.roomCode);
+        if (!code) {
+            socket.emit("join-error", { message: "Enter a four-letter room code." });
+            return;
+        }
+        const room = rooms.get(code);
 
         if (!room) {
             socket.emit("join-error", { message: "The following room does not exist" });
@@ -105,12 +128,14 @@ io.on('connection', (socket) => {
         socket.emit("room-ok");
     });
 
-    socket.on("join-room", ({ roomCode, playerId, name }) => {
-        if (!roomCode || !playerId || !name) {
+    socket.on("join-room", (details) => {
+        const { roomCode, playerId, name } = details || {};
+        const code = normalizeRoomCode(roomCode);
+        if (!code || !isValidPlayer(playerId, name)) {
+            socket.emit("join-error", { message: "Enter your name and a four-letter room code." });
             return;
         }
 
-        const code = roomCode.toUpperCase();
         const room = rooms.get(code);
 
         if (!room) {
@@ -120,17 +145,29 @@ io.on('connection', (socket) => {
 
         const existing = room.players.find(p => p.id === playerId);
 
+        if (!existing && room.players.length >= 8) {
+            socket.emit("join-error", { message: "The existing room is full" });
+            return;
+        }
+
+        if (socket.data.roomCode && socket.data.roomCode !== code) {
+            leaveRoom(socket);
+        }
+
         if (existing) {
+            // A replaced socket must stop receiving this room's chat.
+            const previousSocket = io.sockets.sockets.get(existing.socketId);
+            if (previousSocket && previousSocket !== socket) {
+                previousSocket.leave(code);
+                previousSocket.data.roomCode = undefined;
+                previousSocket.data.playerId = undefined;
+            }
             existing.socketId = socket.id;
         }
         else {
-            if (room.players.length >= 8) {
-                socket.emit("join-error", { message: "The existing room is full" });
-                return;
-            }
             const player = {
                 id: playerId,
-                name: name,
+                name: name.trim(),
                 socketId: socket.id,
                 spectating: room.status === "playing"
             };
@@ -145,13 +182,21 @@ io.on('connection', (socket) => {
         io.to(code).emit("room-update", room);
     });
 
-    socket.on("leave-room", () => {
-        const code = socket.data.roomCode;
+    socket.on("leave-room", (reply) => {
         leaveRoom(socket);
-        socket.leave(code);
-        socket.data.roomCode = undefined;
-        socket.data.playerId = undefined;
+        if (typeof reply === "function") reply();
+    });
 
+    socket.on("chat", (message) => {
+        const code = socket.data.roomCode;
+        const room = rooms.get(code);
+        const player = room?.players.find(p => p.id === socket.data.playerId);
+        if (!player || player.socketId !== socket.id || typeof message?.text !== "string") return;
+
+        const text = message.text.trim();
+        if (!text || text.length > 500) return;
+
+        io.to(code).emit("chat", { user: player.name, text });
     });
 
     socket.on("start-game", () => {
@@ -187,6 +232,10 @@ io.on('connection', (socket) => {
     })
 });
 
-server.listen(port, hostname, () => {
-    console.log(`Listening at: http://${hostname}:${port}`);
-});
+if (require.main === module) {
+    server.listen(port, hostname, () => {
+        console.log(`Listening at: http://${hostname}:${port}`);
+    });
+}
+
+module.exports = { server, io };
