@@ -1,3 +1,5 @@
+const { playerLeft } = require("./gameLoop");
+
 const rooms = new Map();
 
 // create room code
@@ -32,6 +34,9 @@ function leaveRoom(io, socket){
     if (!player || player.socketId !== socket.id){
         return;
     }
+
+    // game must first know who left, then the room can filter out players
+    playerLeft(io, room, playerId);    
 
     room.players = room.players.filter(p => p.id !== playerId);
 

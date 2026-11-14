@@ -170,6 +170,35 @@ function submitWord(io, room, playerId, input){
     startTurn(io, room, true);
 }
 
+
+function playerLeft(io, room, playerId){
+    const game = games.get(room.code);
+    if (!game || !(playerId in game.hearts)){
+        return;
+    }
+
+    const wasActive = game.activeId === playerId;
+    const ownerLeft = game.promptOwnerId === playerId;
+    delete game.hearts[playerId];
+
+    const alive = aliveIds(game);
+    if (alive.length === 1){
+        endGame(io, room, alive[0]);
+        return;
+    }
+
+    if (wasActive) {
+        clearTimeout(game.timer);
+        const nextId = nextAlive(room, game);
+        const newPrompt = ownerLeft || passesSeat(room, playerId, nextId, game.promptOwnerId);
+        game.activeId = nextId;
+        startTurn(io,room, newPrompt);
+    }
+    else if (ownerLeft){
+        game.promptOwnerId = game.activeId;
+    }
+}
+
 function endGame(io, room, winnerId){
         const game = games.get(room.code);
         clearTimeout(game.timer);
@@ -182,4 +211,4 @@ function endGame(io, room, winnerId){
         });
     }
 
-module.exports = {games, startGame, submitWord};
+module.exports = {games, startGame, submitWord, playerLeft};
