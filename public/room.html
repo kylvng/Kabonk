@@ -10,7 +10,8 @@
 
 <body>
     <!-- status while connecting -->
-    <p id="status">Connecting to the room...</p>
+    <p id="status" role="status">Connecting to the room...</p>
+    <a id="back-home" href="/">Back to home</a>
 
     <!-- game room -->
     <div id="room" hidden>
@@ -31,10 +32,20 @@
             </div>
 
             <div id="bottom-bar">
-                Invite Code: <span id="invite-code"></span>
+                <span>Invite Code: <span id="invite-code"></span></span>
+                <button id="leave-room" type="button">Leave Room</button>
             </div>
 
         </div>
+        <aside id="chat-panel" aria-labelledby="chat-heading">
+            <h2 id="chat-heading">Room chat</h2>
+            <ul id="chat-messages" role="log" aria-live="polite" aria-relevant="additions"></ul>
+            <form id="chat-form">
+                <label for="chat-input">Message</label>
+                <input id="chat-input" maxlength="500" autocomplete="off" required disabled>
+                <button id="chat-send" type="submit" disabled>Send</button>
+            </form>
+        </aside>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
