@@ -1,23 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kabonk! Game Room</title>
     <link rel="stylesheet" href="/css/room.css">
 </head>
+
 <body>
-    <main>
-        <h1>Kabonk! Game Room</h1>
-        <p id="status" role="status">Connecting to the room…</p>
-        <section id="room" hidden>
-            <p>Invite code <strong id="invite-code"></strong></p>
-            <h2>Players</h2>
-            <ul id="player-list" aria-live="polite"></ul>
-        </section>
-    </main>
+    <!-- status while connecting -->
+    <p id="status">Connecting to the room...</p>
+
+    <!-- game room -->
+    <div id="room" hidden>
+        <div id="game">
+
+            <h1 id="title">Kabonk!</h1>
+
+            <!-- prompt/answer box -->
+            <div id="prompt-area">
+                <p id="prompt">word</p>
+                <input id="answer-input" type="text" placeholder="Type here">
+            </div>
+
+            <!-- players sitting in a circle-->
+            <div id="circle">
+                <div id="arrow"></div>
+                <div id="bomb">💣</div>
+            </div>
+
+            <div id="bottom-bar">
+                Invite Code: <span id="invite-code"></span>
+            </div>
+
+        </div>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/room.js"></script>
 </body>
+
 </html>
