@@ -68,3 +68,35 @@ function getPlayerId() {
 }
 
 getPlayerId();
+
+
+// checks the code with the server before going to the game lobby page
+const socket = io();
+
+const joinForm = document.getElementById("join-form");
+const joinNameInput = document.getElementById("join-name-input");
+const roomCodeInput = document.getElementById("room-code-input");
+const joinError = document.getElementById("join-error");
+
+// when player clicks join, ask the server before leaving
+joinForm.addEventListener("submit", (event) => {
+    event.preventDefault();   // stops the form from leaving the page
+    joinError.hidden = true;  // clears any old error
+
+    socket.emit("join-room", {
+        playerId: getPlayerId(),
+        name: joinNameInput.value.trim(),
+        roomCode: roomCodeInput.value.trim().toUpperCase()
+    });
+});
+
+// the room exists, so now go to the game room page
+socket.on("room-update", () => {
+    joinForm.submit();   // let the form go to room.html like normal
+});
+
+// error message shows in pop-up and stays on current page
+socket.on("join-error", ({ message }) => {
+    joinError.textContent = message;
+    joinError.hidden = false;
+});
