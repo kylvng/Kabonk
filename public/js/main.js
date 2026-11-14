@@ -83,15 +83,19 @@ joinForm.addEventListener("submit", (event) => {
     event.preventDefault();   // stops the form from leaving the page
     joinError.hidden = true;  // clears any old error
 
-    socket.emit("join-room", {
-        playerId: getPlayerId(),
-        name: joinNameInput.value.trim(),
+    if (joinNameInput.value.trim() === "") {
+        joinError.textContent = "Please enter a name";
+        joinError.hidden = false;
+        return;
+    }
+
+    socket.emit("check-room", {
         roomCode: roomCodeInput.value.trim().toUpperCase()
     });
 });
 
 // the room exists, so now go to the game room page
-socket.on("room-update", () => {
+socket.on("room-ok", () => {
     joinForm.submit();   // let the form go to room.html like normal
 });
 
