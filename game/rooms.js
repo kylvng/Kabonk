@@ -25,6 +25,12 @@ function leaveRoom(io, socket){
     const playerId = socket.data.playerId;
     const room = rooms.get(code);
 
+    if (code) {
+        socket.leave(code);
+    }
+    socket.data.roomCode = undefined;
+    socket.data.playerId = undefined;
+
     if (!room){
         return;
     }
