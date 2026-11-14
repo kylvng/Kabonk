@@ -13,7 +13,7 @@ const io = new Server(server);
 app.use(express.static(path.join(__dirname, "public")));
 
 const { rooms, makeRoomCode, leaveRoom } = require("./game/rooms");
-const { startGame } = require("./game/gameLoop");
+const { startGame, submitWord } = require("./game/gameLoop");
 
 io.on('connection', (socket) => {
     console.log(`User connect on socket ${socket.id}`);
@@ -119,6 +119,27 @@ io.on('connection', (socket) => {
         room.status = "playing";
         io.to(code).emit("room-update", room);
         startGame(io, room);
+    });
+
+    socket.on("submit-word", ({word}) => {
+        const room = rooms.get(socket.data.roomCode);
+        if(!room){
+            return;
+        }
+
+        submitWord(io, room, socket.data.playerId, word);
+    });
+
+    socket.on("typing", ({text}) => {
+        const code = socket.data.roomCode;
+        if (!code){
+            return;
+        }
+
+        socket.to(code).emit("typing", {
+            playerId: socket.data.playerId,
+            text
+        });
     });
     
     socket.on("disconnect", (reason) => {

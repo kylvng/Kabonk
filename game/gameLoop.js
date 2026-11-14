@@ -1,4 +1,5 @@
 const {createPromptPool, tierForTurn} = require("./promptPool");
+const { checkWord} = require("./wordCheck");
 
 const START_HEARTS = 2;
 const START_TIME = 8000;         // ms, bomb time at normal speed
@@ -129,6 +130,46 @@ function explode(io, room) {
     startTurn(io, room, newPrompt);
 }
 
+function submitWord(io, room, playerId, input){
+    const game = games.get(room.code);
+    if (!game) {
+        return;
+    }
+
+    if (playerId !== game.activeId){
+        return;
+    }
+
+    const result = checkWord(input, game.prompt, game.validWords, game.usedWords);
+
+    if (!result.valid){
+        if (result.reason === "empty"){
+            return;
+        }
+
+        // the whole room sees failed attempt
+        io.to(room.code).emit("word-rejected", {
+            playerId,
+            word: String(input).trim().slice(0,30),
+            reason: result.reason
+        });
+        return;
+    }
+
+    clearTimeout(game.timer);
+    game.timer = null;
+    game.usedWords.add(result.word);
+    game.turnCount += 1;
+
+    io.to(room.code).emit("word-accepted", {
+        playerId: playerId,
+        word: result.word
+    });
+
+    game.activeId = nextAlive(room, game);
+    startTurn(io, room, true);
+}
+
 function endGame(io, room, winnerId){
         const game = games.get(room.code);
         clearTimeout(game.timer);
@@ -141,4 +182,4 @@ function endGame(io, room, winnerId){
         });
     }
 
-module.exports = {games, startGame};
+module.exports = {games, startGame, submitWord};
