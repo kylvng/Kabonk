@@ -13,7 +13,8 @@ const io = new Server(server);
 app.use(express.static(path.join(__dirname, "public")));
 
 const { rooms, makeRoomCode, leaveRoom } = require("./game/rooms");
-const { startGame, submitWord } = require("./game/gameLoop");
+const { startGame, submitWord, games } = require("./game/gameLoop");
+
 
 function normalizeRoomCode(value) {
     if (typeof value !== "string") return "";
@@ -177,6 +178,30 @@ io.on('connection', (socket) => {
         startGame(io, room);
     });
 
+    socket.on("play-again", () => {
+        const code = socket.data.roomCode;
+        const room = rooms.get(code);
+        if (!room) {
+            return;
+        }
+
+        if (room.hostId !== socket.data.playerId){
+            socket.emit("start-error", { message: "Only the host can start a new game"});
+            return;
+        }
+
+        if (games.has(code)){
+            return;
+        }
+
+        room.status = "lobby";
+        for (const player of room.players){
+            player.spectating = false;
+        }
+
+        io.to(code).emit("room-update", room);
+    })
+
     socket.on("submit-word", ({word}) => {
         const room = rooms.get(socket.data.roomCode);
 
@@ -201,7 +226,7 @@ io.on('connection', (socket) => {
 
     socket.on("disconnect", (reason) => {
         console.log(`User disconnected on ${socket.id}, reason: ${reason}`);
-        leaveRoom(io, socket);
+        setTimeout(() => leaveRoom(io, socket), 5000);
     })
 });
 
