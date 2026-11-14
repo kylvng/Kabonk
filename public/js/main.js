@@ -57,12 +57,12 @@ for (const button of modeButtons) {
 }
 
 
-// creates a player ID for user upon visiting the home page, ID stays across different rooms
+// Each tab keeps its own player ID across navigation and refreshes.
 function getPlayerId() {
-    let id = localStorage.getItem("playerId");
+    let id = sessionStorage.getItem("playerId");
     if (!id) {
         id = crypto.getRandomValues(new Uint32Array(4)).join("-");
-        localStorage.setItem("playerId", id);
+        sessionStorage.setItem("playerId", id);
     }
     return id;
 }

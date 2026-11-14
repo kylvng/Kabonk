@@ -8,6 +8,12 @@ const statusMessage = document.getElementById("status");
 const inviteCode = document.getElementById("invite-code");
 const circle = document.getElementById("circle");
 const arrow = document.getElementById("arrow");
+const chatMessages = document.getElementById("chat-messages");
+const chatForm = document.getElementById("chat-form");
+const chatInput = document.getElementById("chat-input");
+const chatSend = document.getElementById("chat-send");
+const leaveButton = document.getElementById("leave-room");
+const backHome = document.getElementById("back-home");
 
 // this HAS to match size in room.css
 const CENTER = 200;       // middle of the "invisible" box
@@ -16,7 +22,7 @@ const SEAT_WIDTH = 100;
 const SEAT_HEIGHT = 64;
 
 // remembers each player's seat element, so seats can slide
-const seats = {};
+const seats = Object.create(null);
 
 // finding where to "sit" relative to the amount of players in the game
 function seatAngle(index, total) {
@@ -88,17 +94,17 @@ function drawPlayers(players, myId) {
 }
 
 
-// get the player id and save
+// Each tab keeps its own player ID across navigation and refreshes.
 function getPlayerId() {
-    let id = localStorage.getItem("playerId");
+    let id = sessionStorage.getItem("playerId");
     if (!id) {
         id = crypto.getRandomValues(new Uint32Array(4)).join("-");
-        localStorage.setItem("playerId", id);
+        sessionStorage.setItem("playerId", id);
     }
     return id;
 }
 
-const canOpenRoom = mode === "create" || (mode === "join" && roomCode);
+const canOpenRoom = playerName && (mode === "create" || (mode === "join" && roomCode));
 
 if (!canOpenRoom) {
     statusMessage.textContent = "Open a room from the Create Room or Join Room menu.";
@@ -106,8 +112,10 @@ if (!canOpenRoom) {
     const socket = io();
     // use the saved player ID, so a refresh keeps you as the same player
     const playerId = getPlayerId();
+    let leaving = false;
 
     socket.on("connect", () => {
+        if (leaving) return;
         if (roomCode) {
             socket.emit("join-room", { playerId, name: playerName, roomCode });
         } else {
@@ -116,6 +124,7 @@ if (!canOpenRoom) {
     });
 
     socket.on("room-update", ({ code, players }) => {
+        if (leaving) return;
         if (!roomCode) {
             roomCode = code;
             params.set("mode", "join");
@@ -127,14 +136,55 @@ if (!canOpenRoom) {
         drawPlayers(players, playerId);
 
         statusMessage.hidden = true;
+        backHome.hidden = true;
+        chatInput.disabled = false;
+        chatSend.disabled = false;
         room.hidden = false;
     });
 
     function showStatus(message) {
         statusMessage.textContent = message;
         statusMessage.hidden = false;
+        backHome.hidden = false;
+        chatInput.disabled = true;
+        chatSend.disabled = true;
         room.hidden = true;
     }
+
+    chatForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const text = chatInput.value.trim();
+        if (!text || !socket.connected || chatInput.disabled || leaving) return;
+        socket.emit("chat", { text });
+        chatInput.value = "";
+    });
+
+    socket.on("chat", ({ user, text }) => {
+        const item = document.createElement("li");
+        const sender = document.createElement("strong");
+        sender.textContent = user + ": ";
+        item.append(sender, document.createTextNode(text));
+        chatMessages.appendChild(item);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+
+    leaveButton.addEventListener("click", () => {
+        leaving = true;
+        leaveButton.disabled = true;
+        chatInput.disabled = true;
+        chatSend.disabled = true;
+
+        function goHome() {
+            socket.disconnect();
+            window.location.assign("/");
+        }
+
+        if (socket.connected) {
+            socket.timeout(3000).emit("leave-room", goHome);
+        } else {
+            goHome();
+        }
+    });
 
     socket.on("join-error", ({ message }) => showStatus(message));
     socket.on("disconnect", () => showStatus("Reconnecting to the room..."));

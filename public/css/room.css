@@ -14,7 +14,9 @@ body {
 /* game area */
 #game {
     position: relative;
+    box-sizing: border-box;
     min-height: 100vh;
+    padding-bottom: 80px;
     text-align: center;
 }
 
@@ -97,6 +99,10 @@ body {
 
 #bottom-bar {
     position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     bottom: 0;
     left: 0;
     right: 0;
@@ -108,4 +114,102 @@ body {
 #invite-code {
     font-weight: bold;
     color: #ffd23f;
+}
+
+#room:not([hidden]) {
+    display: grid;
+    grid-template-columns: minmax(400px, 1fr) 320px;
+}
+
+#back-home {
+    display: block;
+    text-align: center;
+    color: #ffd23f;
+}
+
+#back-home[hidden] {
+    display: none;
+}
+
+#chat-panel {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    height: 100vh;
+    padding: 20px;
+    border-left: 2px solid #35345a;
+}
+
+#chat-messages {
+    flex: 1;
+    min-height: 120px;
+    margin: 0 0 16px;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+    overflow-wrap: anywhere;
+}
+
+#chat-messages li {
+    margin-bottom: 12px;
+    white-space: pre-wrap;
+}
+
+#chat-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+}
+
+#chat-form label {
+    grid-column: 1 / -1;
+}
+
+#chat-input,
+#chat-send,
+#leave-room {
+    min-width: 0;
+    padding: 10px;
+    font: inherit;
+    border: 2px solid #35345a;
+    border-radius: 10px;
+}
+
+#chat-send,
+#leave-room {
+    background: #35345a;
+    color: white;
+    cursor: pointer;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+@media (max-width: 760px) {
+    #room:not([hidden]) {
+        grid-template-columns: 1fr;
+    }
+
+    #game {
+        min-height: 600px;
+        overflow-x: auto;
+    }
+
+    #title {
+        position: static;
+        margin-top: 0;
+        padding-top: 20px;
+    }
+
+    #prompt-area {
+        padding-top: 0;
+    }
+
+    #chat-panel {
+        height: 360px;
+        border-left: 0;
+        border-top: 2px solid #35345a;
+    }
 }
