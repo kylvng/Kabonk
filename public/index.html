@@ -1,83 +1,89 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kabonk!</title>
-  <link rel="stylesheet" href="css/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kabonk!</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
 
-  <!-- home screen -->
-  <div id="home">
-    <h1 id="title">Kabonk!</h1>
+    <!-- home screen -->
+    <div id="home">
+        <h1 id="title">Kabonk!</h1>
 
-    <div id="menu">
-      <button id="create-room-button">Create Room</button>
-      <button id="join-room-button">Join Room</button>
-      <button id="how-to-play-button">How to Play</button>
+        <div id="menu">
+            <button id="create-room-button">Create Room</button>
+            <button id="join-room-button">Join Room</button>
+            <button id="how-to-play-button">How to Play</button>
+        </div>
     </div>
-  </div>
 
 
-  <!-- create room pop-up -->
-  <div class="popup" id="create-room-modal" hidden>
-    <form class="popup-box" action="/room.html" method="get">
-      <button type="button" class="close-button" id="create-room-close">X</button>
-      <h2>Create Room</h2>
-      <input type="hidden" name="mode" value="create">
-      <label for="create-name-input">Your name</label>
-      <input class="player-name-input" id="create-name-input" name="name" maxlength="20" required>
-      <p>Choose a game mode</p>
+    <!-- create room pop-up -->
+    <div class="popup" id="create-room-modal" hidden>
+        <form class="popup-box" action="/room.html" method="get">
+            <button type="button" class="close-button" id="create-room-close">X</button>
+            <h2>Create Room</h2>
+            <input type="hidden" name="mode" value="create">
+            <label for="create-name-input">Your name</label>
+            <input class="player-name-input" id="create-name-input" name="name" maxlength="20" required>
+            <p>Choose a game mode</p>
 
-      <div id="mode-grid">
-        <button type="button" class="mode selected">Word Bomb</button>
-        <button type="button" class="mode">Math</button>
-        <button type="button" class="mode" disabled>Coming Soon</button>
-        <button type="button" class="mode" disabled>Coming Soon</button>
-      </div>
+            <div id="mode-grid">
+                <button type="button" class="mode selected">Word Bomb</button>
+                <button type="button" class="mode">Math</button>
+                <button type="button" class="mode" disabled>Coming Soon</button>
+                <button type="button" class="mode" disabled>Coming Soon</button>
+            </div>
 
-      <button type="submit" class="big-button" id="create-button">Create</button>
-    </form>
-  </div>
-
-
-  <!-- join room pop-up -->
-  <div class="popup" id="join-room-modal" hidden>
-    <form class="popup-box" action="/room.html" method="get">
-      <button type="button" class="close-button" id="join-room-close">X</button>
-      <h2>Join Room</h2>
-      <input type="hidden" name="mode" value="join">
-      <p>Enter the room code from your host</p>
-
-      <label for="join-name-input">Your name</label>
-      <input class="player-name-input" id="join-name-input" name="name" maxlength="20" required>
-      <label for="room-code-input">Room code (4 letters)</label>
-      <input id="room-code-input" name="code" maxlength="4" pattern="[A-Za-z]{4}" autocomplete="off" placeholder="e.g. ABCD" required>
-
-      <button type="submit" class="big-button" id="join-button">Join</button>
-    </form>
-  </div>
-
-
-  <!-- how to play pop-up -->
-  <div class="popup" id="how-to-play-modal" hidden>
-    <div class="popup-box">
-      <button class="close-button" id="how-to-play-close">X</button>
-      <h2>How to Play</h2>
-
-      <ol>
-        <li>Create a room and share the code, or join a friend's room.</li>
-        <li>When it's your turn, a group of letters appears (like STR).</li>
-        <li>Type a real word that contains those letters (like STRING) before the bomb explodes.</li>
-        <li>Words can't be repeated until someone loses a life.</li>
-        <li>The bomb gets faster each turn. If the timer runs and the bomb explodes, you lose a heart.</li>
-        <li>Lose all your hearts and you spectate. Last player standing wins!</li>
-      </ol>
+            <button type="submit" class="big-button" id="create-button">Create</button>
+        </form>
     </div>
-  </div>
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="js/main.js"></script>
+
+
+    <!-- join room pop-up -->
+    <div class="popup" id="join-room-modal" hidden>
+        <form class="popup-box" id="join-form" action="/room.html" method="get">
+            <button type="button" class="close-button" id="join-room-close">X</button>
+            <h2>Join Room</h2>
+            <input type="hidden" name="mode" value="join">
+            <p>Enter the room code from your host</p>
+
+            <label for="join-name-input">Your name</label>
+            <input class="player-name-input" id="join-name-input" name="name" maxlength="20" required>
+            <label for="room-code-input">Room code (4 letters)</label>
+            <input id="room-code-input" name="code" maxlength="4" pattern="[A-Za-z]{4}" autocomplete="off"
+                placeholder="e.g. ABCD" required>
+
+            <p id="join-error" hidden></p>
+
+            <button type="submit" class="big-button" id="join-button">Join</button>
+        </form>
+    </div>
+
+
+    <!-- how to play pop-up -->
+    <div class="popup" id="how-to-play-modal" hidden>
+        <div class="popup-box">
+            <button class="close-button" id="how-to-play-close">X</button>
+            <h2>How to Play</h2>
+
+            <ol>
+                <li>Create a room and share the code, or join a friend's room.</li>
+                <li>When it's your turn, a group of letters appears (like STR).</li>
+                <li>Type a real word that contains those letters (like STRING) before the bomb explodes.</li>
+                <li>Words can't be repeated until someone loses a life.</li>
+                <li>The bomb gets faster each turn. If the timer runs and the bomb explodes, you lose a heart.</li>
+                <li>Lose all your hearts and you spectate. Last player standing wins!</li>
+            </ol>
+        </div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/main.js"></script>
 
 </body>
+
 </html>

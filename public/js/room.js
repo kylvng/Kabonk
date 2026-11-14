@@ -8,13 +8,23 @@ const inviteCode = document.getElementById("invite-code");
 const playerList = document.getElementById("player-list");
 const statusMessage = document.getElementById("status");
 
+function getPlayerId() {
+    let id = localStorage.getItem("playerId");
+    if (!id) {
+        id = crypto.getRandomValues(new Uint32Array(4)).join("-");
+        localStorage.setItem("playerId", id);
+    }
+    return id;
+}
+
+
 const canOpenRoom = mode === "create" || (mode === "join" && roomCode);
 if (!canOpenRoom) {
     statusMessage.textContent = "Open a room from the Create Room or Join Room menu.";
 } else {
     const socket = io();
-    // Keep the same player ID if this page reconnects.
-    const playerId = crypto.getRandomValues(new Uint32Array(4)).join("-");
+    // use the saved player ID, so refresh keeps you as same player
+    const playerId = getPlayerId();
 
     socket.on("connect", () => {
         if (roomCode) {

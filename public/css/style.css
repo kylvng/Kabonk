@@ -134,3 +134,8 @@ body {
     text-align: left;
     line-height: 1.6;
   }
+
+  /* join error is red */
+  #join-error {
+    color: #ff5c7a;
+  }

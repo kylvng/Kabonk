@@ -24,37 +24,37 @@ function randomCode() {
     }
     return code;
 }
-function makeRoomCode(){
+function makeRoomCode() {
     let code = randomCode();
-    while (rooms.has(code)){
+    while (rooms.has(code)) {
         code = randomCode();
     }
     return code;
 }
 
-function leaveRoom(socket){
+function leaveRoom(socket) {
     const code = socket.data.roomCode;
     const playerId = socket.data.playerId;
     const room = rooms.get(code);
 
-    if (!room){
+    if (!room) {
         return;
     }
 
     // find if the socket is an old socket, only the current socket attached to the player can remove them
     const player = room.players.find(p => p.id === playerId);
-    if (!player || player.socketId !== socket.id){
+    if (!player || player.socketId !== socket.id) {
         return;
     }
 
     room.players = room.players.filter(p => p.id !== playerId);
 
-    if (room.players.length === 0){
+    if (room.players.length === 0) {
         rooms.delete(code);
         return;
     }
 
-    if (room.hostId === playerId){
+    if (room.hostId === playerId) {
         room.hostId = room.players[0].id;
     }
 
@@ -65,8 +65,8 @@ io.on('connection', (socket) => {
     console.log(`User connect on socket ${socket.id}`);
 
 
-    socket.on("create-room", ({playerId, name}) => {
-        if (!playerId || !name){
+    socket.on("create-room", ({ playerId, name }) => {
+        if (!playerId || !name) {
             return;
         }
 
@@ -76,12 +76,12 @@ io.on('connection', (socket) => {
             hostId: playerId,
             status: "lobby",
             players: [{
-                id:playerId,
+                id: playerId,
                 name,
                 socketId: socket.id
             }]
         };
-        rooms.set(code,room);
+        rooms.set(code, room);
 
         socket.join(code);
         socket.data.roomCode = code;
@@ -90,27 +90,42 @@ io.on('connection', (socket) => {
         io.to(code).emit("room-update", room);
     })
 
-    socket.on("join-room", ({ roomCode, playerId, name}) => {
-        if (!roomCode || !playerId || !name){
+    // checks if a room can be joined
+    socket.on("check-room", ({ roomCode }) => {
+        const room = rooms.get((roomCode || "").toUpperCase());
+
+        if (!room) {
+            socket.emit("join-error", { message: "The following room does not exist" });
+            return;
+        }
+        if (room.players.length >= 8) {
+            socket.emit("join-error", { message: "The existing room is full" });
+            return;
+        }
+        socket.emit("room-ok");
+    });
+
+    socket.on("join-room", ({ roomCode, playerId, name }) => {
+        if (!roomCode || !playerId || !name) {
             return;
         }
 
         const code = roomCode.toUpperCase();
         const room = rooms.get(code);
 
-        if (!room){
-            socket.emit("join-error", {message: "The following room does not exist"});
+        if (!room) {
+            socket.emit("join-error", { message: "The following room does not exist" });
             return;
         }
 
         const existing = room.players.find(p => p.id === playerId);
 
-        if (existing){
+        if (existing) {
             existing.socketId = socket.id;
         }
-        else{
-            if (room.players.length >= 8){
-                socket.emit("join-error", {message: "The existing room is full"});
+        else {
+            if (room.players.length >= 8) {
+                socket.emit("join-error", { message: "The existing room is full" });
                 return;
             }
             const player = {
@@ -134,8 +149,8 @@ io.on('connection', (socket) => {
         const code = socket.data.roomCode;
         leaveRoom(socket);
         socket.leave(code);
-        socket.data.roomCode= undefined;
-        socket.data.playerId= undefined;
+        socket.data.roomCode = undefined;
+        socket.data.playerId = undefined;
 
     });
 
@@ -165,7 +180,7 @@ io.on('connection', (socket) => {
         room.status = "playing";
         io.to(code).emit("room-update", room);
     });
-    
+
     socket.on("disconnect", (reason) => {
         console.log(`User disconnected on ${socket.id}, reason: ${reason}`);
         leaveRoom(socket);
@@ -173,5 +188,5 @@ io.on('connection', (socket) => {
 });
 
 server.listen(port, hostname, () => {
-  console.log(`Listening at: http://${hostname}:${port}`);
+    console.log(`Listening at: http://${hostname}:${port}`);
 });
