@@ -14,6 +14,11 @@ const chatInput = document.getElementById("chat-input");
 const chatSend = document.getElementById("chat-send");
 const leaveButton = document.getElementById("leave-room");
 const backHome = document.getElementById("back-home");
+const startButton = document.getElementById("start-game");
+const lobbyMessage = document.getElementById("lobby-message");
+const promptText = document.getElementById("prompt");
+const timerText = document.getElementById("timer");
+const answerInput = document.getElementById("answer-input");
 
 // this HAS to match size in room.css
 const CENTER = 200;       // middle of the "invisible" box
@@ -86,11 +91,16 @@ function drawPlayers(players, myId) {
 
         placeSeat(seat, i, players.length);
     }
+}
 
-    // points the arrow at the first player (this is a placeholder until turns exist)
-    if (players.length > 0) {
-        arrow.style.transform = "rotate(" + seatAngle(0, players.length) + "deg)";
+function pointArrowAt(players, activeId){
+    const index = players.findIndex((player) => player.id === activeId);
+    if (index === -1){
+        return; // player left the room
     }
+
+    arrow.hidden = false;
+    arrow.style.transform = "rotate(" + seatAngle(index, players.length) + "deg)";
 }
 
 
@@ -113,6 +123,29 @@ if (!canOpenRoom) {
     // use the saved player ID, so a refresh keeps you as the same player
     const playerId = getPlayerId();
     let leaving = false;
+    let currentPlayers = [];        // Last list from room-update, same order as the seats
+    let activeId = null;            // who has the bomb right now
+    let countdown = null;           // setInterval id for the timer text
+
+    function stopCountdown() {
+        clearInterval(countdown);
+        countdown = null;
+        timerText.textContent = "";
+    }
+
+    function startCountdown(duration){
+        stopCountdown();
+        const deadline = Date.now() + duration;
+        timerText.textContent = (duration/1000).toFixed(1) + "s";
+
+        countdown = setInterval(() => {
+            const left = Math.max(0, deadline - Date.now());
+            timerText.textContent = (left/1000).toFixed(1) + "s";
+            if (left === 0){
+                clearInterval(countdown);
+            }
+        }, 100);
+    }
 
     socket.on("connect", () => {
         if (leaving) return;
@@ -123,7 +156,7 @@ if (!canOpenRoom) {
         }
     });
 
-    socket.on("room-update", ({ code, players }) => {
+    socket.on("room-update", ({ code, players, hostId, status }) => {
         if (leaving) return;
         if (!roomCode) {
             roomCode = code;
@@ -133,7 +166,26 @@ if (!canOpenRoom) {
         }
 
         inviteCode.textContent = code;
+        currentPlayers = players;
         drawPlayers(players, playerId);
+
+        if (status === "lobby") {
+            activeId = null;
+            stopCountdown();
+            answerInput.disabled = true;
+            answerInput.value = "";
+            promptText.textContent = "Waiting for the host to start";
+            arrow.hidden = true;
+        }
+        else if (activeId){
+            pointArrowAt(players, activeId);
+        }
+
+        const isHost = hostId === playerId;
+        startButton.hidden = !(isHost && status === "lobby");
+        if (status === "playing"){
+            lobbyMessage.textContent = ""; // game started, so old message is stale
+        }
 
         statusMessage.hidden = true;
         backHome.hidden = true;
@@ -185,6 +237,30 @@ if (!canOpenRoom) {
             goHome();
         }
     });
+
+    startButton.addEventListener("click", () => {
+        lobbyMessage.textContent = "";
+        socket.emit("start-game");
+    });
+
+    socket.on("start-error", ({ message}) =>{
+        lobbyMessage.textContent = message;
+    })
+
+    socket.on("turn-start", (turn) => {
+        activeId = turn.activeId;
+        promptText.textContent = turn.prompt.toUpperCase();
+        pointArrowAt(currentPlayers, activeId);
+        startCountdown(turn.duration);
+
+        const myTurn = activeId === playerId;
+        answerInput.disabled = !myTurn;
+        answerInput.value = "";
+
+        if (myTurn){
+            answerInput.focus();
+        }
+    })
 
     socket.on("join-error", ({ message }) => showStatus(message));
     socket.on("disconnect", () => showStatus("Reconnecting to the room..."));
