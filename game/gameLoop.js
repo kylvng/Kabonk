@@ -25,6 +25,7 @@ function startGame(io,room) {
         validWords: null,
         clearUsedOnNewPrompt: false,
         timer: null,
+        deadline: null,             // when the current turn's bomb goes off
         pool: createPromptPool()
     };
     
@@ -57,6 +58,7 @@ function startTurn(io, room, newPrompt){
     const elapsed = Date.now() - game.speedStart;
     const speedLevel = Math.floor(elapsed / SPEEDUP_EVERY);
     const duration = Math.max(MIN_TIME, START_TIME - STEP * speedLevel);
+    game.deadline = Date.now() + duration;
     game.timer = setTimeout(() => explode(io, room), duration);
 
     io.to(room.code).emit("turn-start", {
@@ -140,6 +142,11 @@ function submitWord(io, room, playerId, input){
         return;
     }
 
+    // too late: explode() is already on its way
+    if (Date.now() >= game.deadline){
+        return;
+    }
+
     const result = checkWord(input, game.prompt, game.validWords, game.usedWords);
 
     if (!result.valid){
@@ -209,6 +216,13 @@ function endGame(io, room, winnerId){
             winnerId,
             winnerName: winner.name
         });
+
+        // back to the lobby so the host can start a new game
+        room.status = "lobby";
+        for (const player of room.players){
+            player.spectating = false;
+        }
+        io.to(room.code).emit("room-update", room);
     }
 
 module.exports = {games, startGame, submitWord, playerLeft};

@@ -2,6 +2,9 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { once } = require("node:events");
 const { io: connect } = require("socket.io-client");
+// short grace period so the disconnect tests don't wait 5 s
+const GRACE = 200;
+process.env.DISCONNECT_GRACE_MS = String(GRACE);
 const { server, io } = require("../server");
 
 test("room chat, validation, and leaving work across four clients in two rooms", async (t) => {
@@ -125,6 +128,16 @@ test("room chat, validation, and leaving work across four clients in two rooms",
     await check(bob, second.code);
     assert.equal(messages.get(bob).length, beforeStale);
 
+    // Reconnecting inside the grace period keeps the player in the room.
+    replaced.disconnect();
+    const rejoined = await client();
+    const back = await join(rejoined, second.code, "bob", "Bob");
+    assert.equal(back.players.filter((player) => player.id === "bob").length, 1);
+    await new Promise((resolve) => setTimeout(resolve, GRACE * 2));
+
+    // Not coming back: removed once the grace period runs out, and the host moves.
     const afterDisconnect = response(dana, "room-update", () => charlie.disconnect());
-    assert.equal((await afterDisconnect).hostId, "dana");
+    const afterGrace = await afterDisconnect;
+    assert.equal(afterGrace.hostId, "dana");
+    assert.deepEqual(afterGrace.players.map((player) => player.name), ["Dana", "Bob"]);
 });

@@ -14,6 +14,7 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const { rooms, makeRoomCode, leaveRoom } = require("./game/rooms");
 const { startGame, submitWord, games } = require("./game/gameLoop");
+const DISCONNECT_GRACE = Number(process.env.DISCONNECT_GRACE_MS) || 5000;     // how long a disconnected player keeps their seat
 
 
 function normalizeRoomCode(value) {
@@ -91,6 +92,12 @@ io.on('connection', (socket) => {
 
         if (!room) {
             socket.emit("join-error", { message: "The following room does not exist" });
+            return;
+        }
+
+        // this socket is already in the room as a different player
+        if (socket.data.roomCode === code && socket.data.playerId !== playerId) {
+            socket.emit("join-error", { message: "You are already in this room." });
             return;
         }
 
@@ -202,7 +209,12 @@ io.on('connection', (socket) => {
         io.to(code).emit("room-update", room);
     })
 
-    socket.on("submit-word", ({word}) => {
+    socket.on("submit-word", (details) => {
+        const { word } = details || {};
+        if (typeof word !== "string") {
+            return;
+        }
+
         const room = rooms.get(socket.data.roomCode);
 
         if(!room){
@@ -212,7 +224,12 @@ io.on('connection', (socket) => {
         submitWord(io, room, socket.data.playerId, word);
     });
 
-    socket.on("typing", ({text}) => {
+    socket.on("typing", (details) => {
+        const { text } = details || {};
+        if (typeof text !== "string") {
+            return;
+        }
+
         const code = socket.data.roomCode;
         if (!code){
             return;
@@ -220,13 +237,13 @@ io.on('connection', (socket) => {
 
         socket.to(code).emit("typing", {
             playerId: socket.data.playerId,
-            text
+            text: text.slice(0, 30)
         });
     });
 
     socket.on("disconnect", (reason) => {
         console.log(`User disconnected on ${socket.id}, reason: ${reason}`);
-        setTimeout(() => leaveRoom(io, socket), 5000);
+        setTimeout(() => leaveRoom(io, socket), DISCONNECT_GRACE);
     })
 });
 
