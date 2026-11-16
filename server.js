@@ -12,25 +12,10 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, "public")));
 
-const rooms = new Map();
+const { rooms, makeRoomCode, leaveRoom } = require("./game/rooms");
+const { startGame, submitWord, games } = require("./game/gameLoop");
+const DISCONNECT_GRACE = Number(process.env.DISCONNECT_GRACE_MS) || 5000;     // how long a disconnected player keeps their seat
 
-// create room code
-const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-function randomCode() {
-    let code = "";
-    for (let i = 0; i < 4; i++) {
-        code += LETTERS[Math.floor(Math.random() * LETTERS.length)];
-    }
-    return code;
-}
-function makeRoomCode() {
-    let code = randomCode();
-    while (rooms.has(code)) {
-        code = randomCode();
-    }
-    return code;
-}
 
 function normalizeRoomCode(value) {
     if (typeof value !== "string") return "";
@@ -41,39 +26,6 @@ function normalizeRoomCode(value) {
 function isValidPlayer(playerId, name) {
     return typeof playerId === "string" && playerId.trim().length > 0 &&
         typeof name === "string" && name.trim().length > 0 && name.trim().length <= 20;
-}
-
-function leaveRoom(socket) {
-    const code = socket.data.roomCode;
-    const playerId = socket.data.playerId;
-    const room = rooms.get(code);
-
-    if (code) socket.leave(code);
-    socket.data.roomCode = undefined;
-    socket.data.playerId = undefined;
-
-    if (!room) {
-        return;
-    }
-
-    // find if the socket is an old socket, only the current socket attached to the player can remove them
-    const player = room.players.find(p => p.id === playerId);
-    if (!player || player.socketId !== socket.id) {
-        return;
-    }
-
-    room.players = room.players.filter(p => p.id !== playerId);
-
-    if (room.players.length === 0) {
-        rooms.delete(code);
-        return;
-    }
-
-    if (room.hostId === playerId) {
-        room.hostId = room.players[0].id;
-    }
-
-    io.to(code).emit("room-update", room);
 }
 
 io.on('connection', (socket) => {
@@ -87,10 +39,10 @@ io.on('connection', (socket) => {
             return;
         }
 
-        leaveRoom(socket);
+        leaveRoom(io, socket);
         const code = makeRoomCode();
         const room = {
-            code: code,
+            code,
             hostId: playerId,
             status: "lobby",
             players: [{
@@ -143,6 +95,12 @@ io.on('connection', (socket) => {
             return;
         }
 
+        // this socket is already in the room as a different player
+        if (socket.data.roomCode === code && socket.data.playerId !== playerId) {
+            socket.emit("join-error", { message: "You are already in this room." });
+            return;
+        }
+
         const existing = room.players.find(p => p.id === playerId);
 
         if (!existing && room.players.length >= 8) {
@@ -151,7 +109,7 @@ io.on('connection', (socket) => {
         }
 
         if (socket.data.roomCode && socket.data.roomCode !== code) {
-            leaveRoom(socket);
+            leaveRoom(io, socket);
         }
 
         if (existing) {
@@ -183,7 +141,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on("leave-room", (reply) => {
-        leaveRoom(socket);
+        leaveRoom(io, socket);
         if (typeof reply === "function") reply();
     });
 
@@ -224,11 +182,68 @@ io.on('connection', (socket) => {
 
         room.status = "playing";
         io.to(code).emit("room-update", room);
+        startGame(io, room);
+    });
+
+    socket.on("play-again", () => {
+        const code = socket.data.roomCode;
+        const room = rooms.get(code);
+        if (!room) {
+            return;
+        }
+
+        if (room.hostId !== socket.data.playerId){
+            socket.emit("start-error", { message: "Only the host can start a new game"});
+            return;
+        }
+
+        if (games.has(code)){
+            return;
+        }
+
+        room.status = "lobby";
+        for (const player of room.players){
+            player.spectating = false;
+        }
+
+        io.to(code).emit("room-update", room);
+    })
+
+    socket.on("submit-word", (details) => {
+        const { word } = details || {};
+        if (typeof word !== "string") {
+            return;
+        }
+
+        const room = rooms.get(socket.data.roomCode);
+
+        if(!room){
+            return;
+        }
+
+        submitWord(io, room, socket.data.playerId, word);
+    });
+
+    socket.on("typing", (details) => {
+        const { text } = details || {};
+        if (typeof text !== "string") {
+            return;
+        }
+
+        const code = socket.data.roomCode;
+        if (!code){
+            return;
+        }
+
+        socket.to(code).emit("typing", {
+            playerId: socket.data.playerId,
+            text: text.slice(0, 30)
+        });
     });
 
     socket.on("disconnect", (reason) => {
         console.log(`User disconnected on ${socket.id}, reason: ${reason}`);
-        leaveRoom(socket);
+        setTimeout(() => leaveRoom(io, socket), DISCONNECT_GRACE);
     })
 });
 
