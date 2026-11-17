@@ -58,9 +58,21 @@ function placeSeat(seat, index, total) {
     seat.style.top = (y - SEAT_HEIGHT / 2) + "px";
 }
 
+function heartsText(hearts, id) {
+    if (Object.keys(hearts).length === 0) {
+        return ""; // lobby, no game yet
+    }
+    if (!(id in hearts)) {
+        return "watching"; // joined mid-game
+    }
+    if (hearts[id] === 0) {
+        return "💀 out";
+    }
+    return "♥ ".repeat(hearts[id]).trim();
+}
 
 // draw players around the bomb
-function drawPlayers(players, myId) {
+function drawPlayers(players, myId, hearts) {
     // remove seats of players who left
     for (const id in seats) {
         const stillHere = players.some((player) => player.id === id);
@@ -94,8 +106,7 @@ function drawPlayers(players, myId) {
 
         const heartsLine = document.createElement("div");
         heartsLine.classList.add("hearts");
-        heartsLine.textContent = "♥ ♥";
-
+        heartsLine.textContent = heartsText(hearts, player.id);
         seat.replaceChildren(nameLine, heartsLine);
 
         placeSeat(seat, i, players.length);
@@ -135,7 +146,8 @@ if (!canOpenRoom) {
     let currentPlayers = [];        // Last list from room-update, same order as the seats
     let activeId = null;            // who has the bomb right now
     let countdown = null;           // setInterval id for the timer text
-
+    let currentHearts = {};         // last hearts map from the server, {} in the lobby
+    
     function stopCountdown() {
         clearInterval(countdown);
         countdown = null;
@@ -181,7 +193,10 @@ if (!canOpenRoom) {
 
         inviteCode.textContent = code;
         currentPlayers = players;
-        drawPlayers(players, playerId);
+        if (status === "lobby") {
+            currentHearts = {};
+        }
+        drawPlayers(players, playerId, currentHearts);
 
         if (status === "lobby") {
             attemptText.textContent = "";
@@ -284,6 +299,8 @@ if (!canOpenRoom) {
         promptText.textContent = turn.prompt.toUpperCase();
         pointArrowAt(currentPlayers, activeId);
         startCountdown(turn.duration);
+        currentHearts = turn.hearts;
+        drawPlayers(currentPlayers, playerId, currentHearts);
 
         const myTurn = activeId === playerId;
         answerInput.disabled = !myTurn;
@@ -304,6 +321,16 @@ if (!canOpenRoom) {
 
     socket.on("word-accepted", (result) => {
         lastResult.textContent = nameOf(result.playerId) + " played " + result.word.toUpperCase() + " ✓";
+    });
+
+    socket.on("bomb-exploded", (boom) => {
+        currentHearts = boom.hearts;
+        drawPlayers(currentPlayers, playerId, currentHearts);
+        lastResult.textContent = "💥 " + nameOf(boom.playerId) + " lost a heart";
+    });
+
+    socket.on("game-over", ({ winnerName }) => {
+        lobbyMessage.textContent = winnerName + " wins!";
     });
 
     socket.on("word-rejected", (result) => {
