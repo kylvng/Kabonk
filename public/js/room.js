@@ -19,12 +19,21 @@ const lobbyMessage = document.getElementById("lobby-message");
 const promptText = document.getElementById("prompt");
 const timerText = document.getElementById("timer");
 const answerInput = document.getElementById("answer-input");
+const attemptText = document.getElementById("attempt");
+const lastResult = document.getElementById("last-result");
 
 // this HAS to match size in room.css
 const CENTER = 200;       // middle of the "invisible" box
 const RADIUS = 150;       // how far seats are from the bomb
 const SEAT_WIDTH = 100;
 const SEAT_HEIGHT = 64;
+
+// what each word-rejected reason means, for the player
+const REJECT_REASONS = {
+    "missing-letters": "doesn't have the letters",
+    "not-a-word": "not a word",
+    "already-used": "already used"
+};
 
 // remembers each player's seat element, so seats can slide
 const seats = Object.create(null);
@@ -147,6 +156,11 @@ if (!canOpenRoom) {
         }, 100);
     }
 
+    function nameOf(id){
+        const player = currentPlayers.find((p) => p.id === id);
+        return player ? player.name : "Someone";
+    }
+
     socket.on("connect", () => {
         if (leaving) return;
         if (roomCode) {
@@ -170,6 +184,8 @@ if (!canOpenRoom) {
         drawPlayers(players, playerId);
 
         if (status === "lobby") {
+            attemptText.textContent = "";
+            lastResult.textContent = "";
             activeId = null;
             stopCountdown();
             answerInput.disabled = true;
@@ -177,7 +193,7 @@ if (!canOpenRoom) {
             promptText.textContent = "Waiting for the host to start";
             arrow.hidden = true;
         }
-        else if (activeId){
+        else if (activeId) {
             pointArrowAt(players, activeId);
         }
 
@@ -243,12 +259,28 @@ if (!canOpenRoom) {
         socket.emit("start-game");
     });
 
+    answerInput.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" || answerInput.disabled) {
+            return;
+        }
+        socket.emit("submit-word", { word: answerInput.value});
+    });
+
+    answerInput.addEventListener("input", () => {
+        if (answerInput.disabled) {
+            return;
+        }
+
+        socket.emit("typing", { text: answerInput.value });
+    });
+
     socket.on("start-error", ({ message}) =>{
         lobbyMessage.textContent = message;
     })
 
     socket.on("turn-start", (turn) => {
         activeId = turn.activeId;
+        attemptText.textContent = "";
         promptText.textContent = turn.prompt.toUpperCase();
         pointArrowAt(currentPlayers, activeId);
         startCountdown(turn.duration);
@@ -261,6 +293,27 @@ if (!canOpenRoom) {
             answerInput.focus();
         }
     })
+
+    socket.on("typing", (typed) => {
+        if (typed.playerId !== activeId) {
+            return;
+        }
+
+        attemptText.textContent = nameOf(typed.playerId) + ": " + typed.text.toUpperCase();
+    })
+
+    socket.on("word-accepted", (result) => {
+        lastResult.textContent = nameOf(result.playerId) + " played " + result.word.toUpperCase() + " ✓";
+    });
+
+    socket.on("word-rejected", (result) => {
+        const why = REJECT_REASONS[result.reason] || result.reason;
+        lastResult.textContent = nameOf(result.playerId) + ": " + result.word.toUpperCase() + " ✗ (" + why + ")";
+
+        if (result.playerId === playerId) {
+            answerInput.select(); // highlight it so typing replaces it
+        }
+    });
 
     socket.on("join-error", ({ message }) => showStatus(message));
     socket.on("disconnect", () => showStatus("Reconnecting to the room..."));
