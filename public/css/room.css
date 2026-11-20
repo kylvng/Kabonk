@@ -213,3 +213,12 @@ button:disabled {
         border-top: 2px solid #35345a;
     }
 }
+
+#lobby-controls {
+    margin-top: 10px;
+}
+
+#lobby-message {
+    color: #ff6b3d;
+    min-height: 20px; 
+}
