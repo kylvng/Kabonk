@@ -10,6 +10,10 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+app.get("/health", (_req, res) => {
+    res.status(200).json({ status: "ok" });
+});
+
 app.use(express.static(path.join(__dirname, "public")));
 
 const { rooms, makeRoomCode, leaveRoom } = require("./game/rooms");
