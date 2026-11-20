@@ -14,6 +14,7 @@ const chatInput = document.getElementById("chat-input");
 const chatSend = document.getElementById("chat-send");
 const leaveButton = document.getElementById("leave-room");
 const backHome = document.getElementById("back-home");
+const copyLinkButton = document.getElementById("copy-link");
 const startButton = document.getElementById("start-game");
 const lobbyMessage = document.getElementById("lobby-message");
 const promptText = document.getElementById("prompt");
@@ -113,9 +114,9 @@ function drawPlayers(players, myId, hearts) {
     }
 }
 
-function pointArrowAt(players, activeId){
+function pointArrowAt(players, activeId) {
     const index = players.findIndex((player) => player.id === activeId);
-    if (index === -1){
+    if (index === -1) {
         return; // player left the room
     }
 
@@ -135,8 +136,35 @@ function getPlayerId() {
 }
 
 const canOpenRoom = playerName && (mode === "create" || (mode === "join" && roomCode));
+const needsName = mode === "join" && roomCode && !playerName;
 
-if (!canOpenRoom) {
+if (needsName) {
+    const nameModal = document.getElementById("name-modal");
+    const nameForm = document.getElementById("name-form");
+    const nameInput = document.getElementById("name-input");
+    const nameError = document.getElementById("name-error");
+
+    nameInput.value = localStorage.getItem("playerName") || "";
+    statusMessage.hidden = true;
+    nameModal.hidden = false;
+    nameInput.focus();
+
+    // when the player submits the name pop-up, show an error if the name is empty or only spaces
+    nameForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const name = nameInput.value.trim();
+
+        if (name === "") {
+            nameError.textContent = "Please enter a name";
+            nameError.hidden = false;
+            return;
+        }
+
+        localStorage.setItem("playerName", name);
+        params.set("name", name);
+        window.location.replace("?" + params);
+    });
+} else if (!canOpenRoom) {
     statusMessage.textContent = "Open a room from the Create Room or Join Room menu.";
 } else {
     const socket = io();
@@ -147,28 +175,28 @@ if (!canOpenRoom) {
     let activeId = null;            // who has the bomb right now
     let countdown = null;           // setInterval id for the timer text
     let currentHearts = {};         // last hearts map from the server, {} in the lobby
-    
+
     function stopCountdown() {
         clearInterval(countdown);
         countdown = null;
         timerText.textContent = "";
     }
 
-    function startCountdown(duration){
+    function startCountdown(duration) {
         stopCountdown();
         const deadline = Date.now() + duration;
-        timerText.textContent = (duration/1000).toFixed(1) + "s";
+        timerText.textContent = (duration / 1000).toFixed(1) + "s";
 
         countdown = setInterval(() => {
             const left = Math.max(0, deadline - Date.now());
-            timerText.textContent = (left/1000).toFixed(1) + "s";
-            if (left === 0){
+            timerText.textContent = (left / 1000).toFixed(1) + "s";
+            if (left === 0) {
                 clearInterval(countdown);
             }
         }, 100);
     }
 
-    function nameOf(id){
+    function nameOf(id) {
         const player = currentPlayers.find((p) => p.id === id);
         return player ? player.name : "Someone";
     }
@@ -214,7 +242,7 @@ if (!canOpenRoom) {
 
         const isHost = hostId === playerId;
         startButton.hidden = !(isHost && status === "lobby");
-        if (status === "playing"){
+        if (status === "playing") {
             lobbyMessage.textContent = ""; // game started, so old message is stale
         }
 
@@ -269,6 +297,18 @@ if (!canOpenRoom) {
         }
     });
 
+    // copy an invite link like /?room=ABCD so friends can join without typing the code
+    copyLinkButton.addEventListener("click", () => {
+        const link = window.location.origin + "/?room=" + roomCode;
+        navigator.clipboard.writeText(link)
+            .then(() => { copyLinkButton.textContent = "Copied!"; })
+            .catch(() => { copyLinkButton.textContent = "Copy failed"; });
+        
+        setTimeout(() => {
+            copyLinkButton.textContent = "Copy invite link";
+        }, 2000);
+    });
+
     startButton.addEventListener("click", () => {
         lobbyMessage.textContent = "";
         socket.emit("start-game");
@@ -278,7 +318,7 @@ if (!canOpenRoom) {
         if (event.key !== "Enter" || answerInput.disabled) {
             return;
         }
-        socket.emit("submit-word", { word: answerInput.value});
+        socket.emit("submit-word", { word: answerInput.value });
     });
 
     answerInput.addEventListener("input", () => {
@@ -289,7 +329,7 @@ if (!canOpenRoom) {
         socket.emit("typing", { text: answerInput.value });
     });
 
-    socket.on("start-error", ({ message}) =>{
+    socket.on("start-error", ({ message }) => {
         lobbyMessage.textContent = message;
     })
 
@@ -306,7 +346,7 @@ if (!canOpenRoom) {
         answerInput.disabled = !myTurn;
         answerInput.value = "";
 
-        if (myTurn){
+        if (myTurn) {
             answerInput.focus();
         }
     })
@@ -341,6 +381,7 @@ if (!canOpenRoom) {
             answerInput.select(); // highlight it so typing replaces it
         }
     });
+
 
     socket.on("join-error", ({ message }) => showStatus(message));
     socket.on("disconnect", () => showStatus("Reconnecting to the room..."));

@@ -13,6 +13,16 @@
     <p id="status" role="status">Connecting to the room...</p>
     <a id="back-home" href="/">Back to home</a>
 
+    <div class="popup" id="name-modal" hidden>
+        <form class="popup-box" id="name-form">
+            <h2>Enter your name</h2>
+            <label for="name-input">Your name</label>
+            <input id="name-input" maxlength="20" autocomplete="off" required>
+            <p id="name-error" hidden></p>
+            <button type="submit" class="big-button">Join</button>
+        </form>
+    </div>
+
     <!-- game room -->
     <div id="room" hidden>
         <div id="game">
@@ -42,6 +52,7 @@
 
             <div id="bottom-bar">
                 <span>Invite Code: <span id="invite-code"></span></span>
+                <button id="copy-link" type="button">Copy invite link</button>
                 <button id="leave-room" type="button">Leave Room</button>
             </div>
 
