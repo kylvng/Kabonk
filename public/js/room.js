@@ -303,6 +303,10 @@ if (needsName) {
         navigator.clipboard.writeText(link)
             .then(() => { copyLinkButton.textContent = "Copied!"; })
             .catch(() => { copyLinkButton.textContent = "Copy failed"; });
+        
+        setTimeout(() => {
+            copyLinkButton.textContent = "Copy invite link";
+        }, 2000);
     });
 
     startButton.addEventListener("click", () => {
