@@ -31,7 +31,7 @@ The Blueprint uses `npm ci --omit=dev` to install production dependencies, `npm 
 
 In **New > Web Service**, choose **Public Git Repository** and enter `https://github.com/kylvng/Kabonk`. Use the same build/start commands and health check listed above, select **Free**, leave Root Directory empty, and set `NODE_ENV=production`. The `.node-version` file selects Node 22.
 
-For the initial deployment before review and merge, select `codex/host-on-render` as the branch. Once the changes merge, change the service branch to `main` and manually deploy its latest commit. Public repository services require manual deploys through the dashboard. Connecting the GitHub repository later enables automatic deploys.
+For the initial deployment before review and merge, select `feat/host-website-on-domain` as the branch. Once the changes merge, change the service branch to `main` and manually deploy its latest commit. Public repository services require manual deploys through the dashboard. Connecting the GitHub repository later enables automatic deploys.
 
 ### Verify the public deployment
 
