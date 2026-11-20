@@ -78,6 +78,19 @@ const joinNameInput = document.getElementById("join-name-input");
 const roomCodeInput = document.getElementById("room-code-input");
 const joinError = document.getElementById("join-error");
 
+const createForm = document.getElementById("create-form");
+const createNameInput = document.getElementById("create-name-input");
+
+// // save the player's name so they don't have to type it again next time
+// it fills in the name boxes here (can be changed)
+const savedName = localStorage.getItem("playerName") || "";
+createNameInput.value = savedName;
+joinNameInput.value = savedName;
+
+createForm.addEventListener("submit", () => {
+    localStorage.setItem("playerName", createNameInput.value.trim());
+});
+
 // when player clicks join, ask the server before leaving
 joinForm.addEventListener("submit", (event) => {
     event.preventDefault();   // stops the form from leaving the page
@@ -89,18 +102,35 @@ joinForm.addEventListener("submit", (event) => {
         return;
     }
 
+    localStorage.setItem("playerName", joinNameInput.value.trim());
+
     socket.emit("check-room", {
         roomCode: roomCodeInput.value.trim().toUpperCase()
     });
 });
 
+// invite link
+const linkRoom = new URLSearchParams(window.location.search).get("room");
+
 // the room exists, so now go to the game room page
 socket.on("room-ok", () => {
-    joinForm.submit();   // let the form go to room.html like normal
+    if (linkRoom) {
+        window.location.replace("/room.html?mode=join&code=" + roomCodeInput.value);
+    } else {
+        joinForm.submit(); // let the form go to room.html like normal
+    }   
 });
 
 // error message shows in pop-up and stays on current page
 socket.on("join-error", ({ message }) => {
+    joinRoomModal.hidden = false;
     joinError.textContent = message;
     joinError.hidden = false;
 });
+
+if (linkRoom) {
+    roomCodeInput.value = linkRoom.trim().toUpperCase();
+    socket.emit("check-room", { roomCode: roomCodeInput.value });
+}
+
+

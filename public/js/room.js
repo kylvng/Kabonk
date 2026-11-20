@@ -14,6 +14,7 @@ const chatInput = document.getElementById("chat-input");
 const chatSend = document.getElementById("chat-send");
 const leaveButton = document.getElementById("leave-room");
 const backHome = document.getElementById("back-home");
+const copyLinkButton = document.getElementById("copy-link");
 
 // this HAS to match size in room.css
 const CENTER = 200;       // middle of the "invisible" box
@@ -105,8 +106,35 @@ function getPlayerId() {
 }
 
 const canOpenRoom = playerName && (mode === "create" || (mode === "join" && roomCode));
+const needsName = mode === "join" && roomCode && !playerName;
 
-if (!canOpenRoom) {
+if (needsName) {
+    const nameModal = document.getElementById("name-modal");
+    const nameForm = document.getElementById("name-form");
+    const nameInput = document.getElementById("name-input");
+    const nameError = document.getElementById("name-error");
+
+    nameInput.value = localStorage.getItem("playerName") || "";
+    statusMessage.hidden = true;
+    nameModal.hidden = false;
+    nameInput.focus();
+
+    // when the player submits the name pop-up, show an error if the name is empty or only spaces
+    nameForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const name = nameInput.value.trim();
+
+        if (name === "") {
+            nameError.textContent = "Please enter a name";
+            nameError.hidden = false;
+            return;
+        }
+
+        localStorage.setItem("playerName", name);
+        params.set("name", name);
+        window.location.replace("?" + params);
+    });
+} else if (!canOpenRoom) {
     statusMessage.textContent = "Open a room from the Create Room or Join Room menu.";
 } else {
     const socket = io();
@@ -184,6 +212,13 @@ if (!canOpenRoom) {
         } else {
             goHome();
         }
+    });
+
+    copyLinkButton.addEventListener("click", () => {
+        const link = window.location.origin + "/?room=" + roomCode;
+        navigator.clipboard.writeText(link)
+            .then(() => { copyLinkButton.textContent = "Copied!"; })
+            .catch(() => { copyLinkButton.textContent = "Copy failed"; });
     });
 
     socket.on("join-error", ({ message }) => showStatus(message));
