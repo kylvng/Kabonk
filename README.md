@@ -27,7 +27,11 @@ Deploy the root application as a **Web Service**. The `websocket-demo/` director
 
 The Blueprint uses `npm ci --omit=dev` to install production dependencies, `npm start` to launch the app, and `/health` to check that HTTP is responding. No frontend build, database, or secrets are required for the current app. The server already listens on `0.0.0.0` and Render's `PORT`. Socket.IO connects to the page's origin, so the same code works locally and over HTTPS.
 
-If creating a Web Service manually instead, use these same settings, Node runtime, repository root, `main` branch, and `NODE_ENV=production`. The `.node-version` file selects Node 22.
+### Public repository deployment (without GitHub authorization)
+
+In **New > Web Service**, choose **Public Git Repository** and enter `https://github.com/kylvng/Kabonk`. Use the same build/start commands and health check listed above, select **Free**, leave Root Directory empty, and set `NODE_ENV=production`. The `.node-version` file selects Node 22.
+
+For the initial deployment before review and merge, select `codex/host-on-render` as the branch. Once the changes merge, change the service branch to `main` and manually deploy its latest commit. Public repository services require manual deploys through the dashboard. Connecting the GitHub repository later enables automatic deploys.
 
 ### Verify the public deployment
 
