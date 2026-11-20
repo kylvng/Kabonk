@@ -215,7 +215,7 @@ button:disabled {
         border-top: 2px solid #35345a;
     }
 
-    
+
 }
 
 /* name pop-up for invite-link players */
@@ -226,9 +226,9 @@ button:disabled {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.7);
-  }
-  
-  .popup-box {
+}
+
+.popup-box {
     width: 360px;
     max-width: 90%;
     margin: 120px auto;
@@ -236,26 +236,26 @@ button:disabled {
     background-color: #2a2944;
     border-radius: 20px;
     text-align: center;
-  }
-  
-  .popup-box label {
+}
+
+.popup-box label {
     display: block;
     margin-bottom: 8px;
-  }
-  
-  #name-input {
+}
+
+#name-input {
     width: 90%;
     padding: 12px;
     font-size: 18px;
     border-radius: 12px;
-  }
-  
-  #name-error {
+}
+
+#name-error {
     color: #ff5c7a;
-  }
-  
-  /* join button */
-  .big-button {
+}
+
+/* join button */
+.big-button {
     width: 100%;
     margin-top: 20px;
     padding: 14px;
@@ -266,4 +266,13 @@ button:disabled {
     background-color: #ff6b3d;
     color: white;
     cursor: pointer;
-  }
+}
+
+#lobby-controls {
+    margin-top: 10px;
+}
+
+#lobby-message {
+    color: #ff6b3d;
+    min-height: 20px;
+}

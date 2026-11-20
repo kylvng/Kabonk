@@ -31,13 +31,22 @@
 
             <!-- prompt/answer box -->
             <div id="prompt-area">
-                <p id="prompt">word</p>
-                <input id="answer-input" type="text" placeholder="Type here">
+                <p id="prompt"></p>
+                <p id="timer"></p>
+                <input id="answer-input" type="text" placeholder="Type here" autocomplete="off" disabled>
+
+                <p id="attempt"></p>
+                <p id="last-result"></p>
+            </div>
+
+            <div id="lobby-controls">
+                <button id="start-game" type="button" hidden>Start Game</button>
+                <p id="lobby-message"></p>
             </div>
 
             <!-- players sitting in a circle-->
             <div id="circle">
-                <div id="arrow"></div>
+                <div id="arrow" hidden></div>
                 <div id="bomb">💣</div>
             </div>
 

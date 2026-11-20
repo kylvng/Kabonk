@@ -15,12 +15,26 @@ const chatSend = document.getElementById("chat-send");
 const leaveButton = document.getElementById("leave-room");
 const backHome = document.getElementById("back-home");
 const copyLinkButton = document.getElementById("copy-link");
+const startButton = document.getElementById("start-game");
+const lobbyMessage = document.getElementById("lobby-message");
+const promptText = document.getElementById("prompt");
+const timerText = document.getElementById("timer");
+const answerInput = document.getElementById("answer-input");
+const attemptText = document.getElementById("attempt");
+const lastResult = document.getElementById("last-result");
 
 // this HAS to match size in room.css
 const CENTER = 200;       // middle of the "invisible" box
 const RADIUS = 150;       // how far seats are from the bomb
 const SEAT_WIDTH = 100;
 const SEAT_HEIGHT = 64;
+
+// what each word-rejected reason means, for the player
+const REJECT_REASONS = {
+    "missing-letters": "doesn't have the letters",
+    "not-a-word": "not a word",
+    "already-used": "already used"
+};
 
 // remembers each player's seat element, so seats can slide
 const seats = Object.create(null);
@@ -45,9 +59,21 @@ function placeSeat(seat, index, total) {
     seat.style.top = (y - SEAT_HEIGHT / 2) + "px";
 }
 
+function heartsText(hearts, id) {
+    if (Object.keys(hearts).length === 0) {
+        return ""; // lobby, no game yet
+    }
+    if (!(id in hearts)) {
+        return "watching"; // joined mid-game
+    }
+    if (hearts[id] === 0) {
+        return "💀 out";
+    }
+    return "♥ ".repeat(hearts[id]).trim();
+}
 
 // draw players around the bomb
-function drawPlayers(players, myId) {
+function drawPlayers(players, myId, hearts) {
     // remove seats of players who left
     for (const id in seats) {
         const stillHere = players.some((player) => player.id === id);
@@ -81,17 +107,21 @@ function drawPlayers(players, myId) {
 
         const heartsLine = document.createElement("div");
         heartsLine.classList.add("hearts");
-        heartsLine.textContent = "♥ ♥";
-
+        heartsLine.textContent = heartsText(hearts, player.id);
         seat.replaceChildren(nameLine, heartsLine);
 
         placeSeat(seat, i, players.length);
     }
+}
 
-    // points the arrow at the first player (this is a placeholder until turns exist)
-    if (players.length > 0) {
-        arrow.style.transform = "rotate(" + seatAngle(0, players.length) + "deg)";
+function pointArrowAt(players, activeId) {
+    const index = players.findIndex((player) => player.id === activeId);
+    if (index === -1) {
+        return; // player left the room
     }
+
+    arrow.hidden = false;
+    arrow.style.transform = "rotate(" + seatAngle(index, players.length) + "deg)";
 }
 
 
@@ -141,6 +171,35 @@ if (needsName) {
     // use the saved player ID, so a refresh keeps you as the same player
     const playerId = getPlayerId();
     let leaving = false;
+    let currentPlayers = [];        // Last list from room-update, same order as the seats
+    let activeId = null;            // who has the bomb right now
+    let countdown = null;           // setInterval id for the timer text
+    let currentHearts = {};         // last hearts map from the server, {} in the lobby
+
+    function stopCountdown() {
+        clearInterval(countdown);
+        countdown = null;
+        timerText.textContent = "";
+    }
+
+    function startCountdown(duration) {
+        stopCountdown();
+        const deadline = Date.now() + duration;
+        timerText.textContent = (duration / 1000).toFixed(1) + "s";
+
+        countdown = setInterval(() => {
+            const left = Math.max(0, deadline - Date.now());
+            timerText.textContent = (left / 1000).toFixed(1) + "s";
+            if (left === 0) {
+                clearInterval(countdown);
+            }
+        }, 100);
+    }
+
+    function nameOf(id) {
+        const player = currentPlayers.find((p) => p.id === id);
+        return player ? player.name : "Someone";
+    }
 
     socket.on("connect", () => {
         if (leaving) return;
@@ -151,7 +210,7 @@ if (needsName) {
         }
     });
 
-    socket.on("room-update", ({ code, players }) => {
+    socket.on("room-update", ({ code, players, hostId, status }) => {
         if (leaving) return;
         if (!roomCode) {
             roomCode = code;
@@ -161,7 +220,31 @@ if (needsName) {
         }
 
         inviteCode.textContent = code;
-        drawPlayers(players, playerId);
+        currentPlayers = players;
+        if (status === "lobby") {
+            currentHearts = {};
+        }
+        drawPlayers(players, playerId, currentHearts);
+
+        if (status === "lobby") {
+            attemptText.textContent = "";
+            lastResult.textContent = "";
+            activeId = null;
+            stopCountdown();
+            answerInput.disabled = true;
+            answerInput.value = "";
+            promptText.textContent = "Waiting for the host to start";
+            arrow.hidden = true;
+        }
+        else if (activeId) {
+            pointArrowAt(players, activeId);
+        }
+
+        const isHost = hostId === playerId;
+        startButton.hidden = !(isHost && status === "lobby");
+        if (status === "playing") {
+            lobbyMessage.textContent = ""; // game started, so old message is stale
+        }
 
         statusMessage.hidden = true;
         backHome.hidden = true;
@@ -214,12 +297,87 @@ if (needsName) {
         }
     });
 
+    // copy an invite link like /?room=ABCD so friends can join without typing the code
     copyLinkButton.addEventListener("click", () => {
         const link = window.location.origin + "/?room=" + roomCode;
         navigator.clipboard.writeText(link)
             .then(() => { copyLinkButton.textContent = "Copied!"; })
             .catch(() => { copyLinkButton.textContent = "Copy failed"; });
     });
+
+    startButton.addEventListener("click", () => {
+        lobbyMessage.textContent = "";
+        socket.emit("start-game");
+    });
+
+    answerInput.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" || answerInput.disabled) {
+            return;
+        }
+        socket.emit("submit-word", { word: answerInput.value });
+    });
+
+    answerInput.addEventListener("input", () => {
+        if (answerInput.disabled) {
+            return;
+        }
+
+        socket.emit("typing", { text: answerInput.value });
+    });
+
+    socket.on("start-error", ({ message }) => {
+        lobbyMessage.textContent = message;
+    })
+
+    socket.on("turn-start", (turn) => {
+        activeId = turn.activeId;
+        attemptText.textContent = "";
+        promptText.textContent = turn.prompt.toUpperCase();
+        pointArrowAt(currentPlayers, activeId);
+        startCountdown(turn.duration);
+        currentHearts = turn.hearts;
+        drawPlayers(currentPlayers, playerId, currentHearts);
+
+        const myTurn = activeId === playerId;
+        answerInput.disabled = !myTurn;
+        answerInput.value = "";
+
+        if (myTurn) {
+            answerInput.focus();
+        }
+    })
+
+    socket.on("typing", (typed) => {
+        if (typed.playerId !== activeId) {
+            return;
+        }
+
+        attemptText.textContent = nameOf(typed.playerId) + ": " + typed.text.toUpperCase();
+    })
+
+    socket.on("word-accepted", (result) => {
+        lastResult.textContent = nameOf(result.playerId) + " played " + result.word.toUpperCase() + " ✓";
+    });
+
+    socket.on("bomb-exploded", (boom) => {
+        currentHearts = boom.hearts;
+        drawPlayers(currentPlayers, playerId, currentHearts);
+        lastResult.textContent = "💥 " + nameOf(boom.playerId) + " lost a heart";
+    });
+
+    socket.on("game-over", ({ winnerName }) => {
+        lobbyMessage.textContent = winnerName + " wins!";
+    });
+
+    socket.on("word-rejected", (result) => {
+        const why = REJECT_REASONS[result.reason] || result.reason;
+        lastResult.textContent = nameOf(result.playerId) + ": " + result.word.toUpperCase() + " ✗ (" + why + ")";
+
+        if (result.playerId === playerId) {
+            answerInput.select(); // highlight it so typing replaces it
+        }
+    });
+
 
     socket.on("join-error", ({ message }) => showStatus(message));
     socket.on("disconnect", () => showStatus("Reconnecting to the room..."));
