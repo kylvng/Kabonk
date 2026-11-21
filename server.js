@@ -12,8 +12,9 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, "public")));
 
-const { rooms, makeRoomCode, leaveRoom } = require("./game/rooms");
+const { rooms, makeRoomCode, leaveRoom, restoreRooms } = require("./game/rooms");
 const { startGame, submitWord, games } = require("./game/gameLoop");
+const store = require("./db/roomStore");
 const DISCONNECT_GRACE = Number(process.env.DISCONNECT_GRACE_MS) || 5000;     // how long a disconnected player keeps their seat
 
 
@@ -52,6 +53,7 @@ io.on('connection', (socket) => {
             }]
         };
         rooms.set(code, room);
+        store.saveRoom(room);
 
         socket.join(code);
         socket.data.roomCode = code;
@@ -131,6 +133,7 @@ io.on('connection', (socket) => {
             };
 
             room.players.push(player);
+            store.addPlayer(code, player);
         }
 
         socket.join(code);
@@ -181,6 +184,7 @@ io.on('connection', (socket) => {
         }
 
         room.status = "playing";
+        store.setStatus(code, "playing");
         io.to(code).emit("room-update", room);
         startGame(io, room);
     });
@@ -205,6 +209,7 @@ io.on('connection', (socket) => {
         for (const player of room.players){
             player.spectating = false;
         }
+        store.setStatus(code, "lobby");
 
         io.to(code).emit("room-update", room);
     })
@@ -247,10 +252,23 @@ io.on('connection', (socket) => {
     })
 });
 
-if (require.main === module) {
+async function start() {
+    try {
+        const restored = await restoreRooms(io);
+        if (restored.length > 0) {
+            console.log(`Restored ${restored.length} room(s) from the database`);
+        }
+    } catch (err) {
+        console.error("Couldn't load rooms from the database, starting without them:", err.message);
+    }
+
     server.listen(port, hostname, () => {
         console.log(`Listening at: http://${hostname}:${port}`);
     });
+}
+
+if (require.main === module) {
+    start();
 }
 
 module.exports = { server, io };

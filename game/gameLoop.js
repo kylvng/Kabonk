@@ -1,5 +1,6 @@
 const {createPromptPool, tierForTurn} = require("./promptPool");
 const { checkWord} = require("./wordCheck");
+const store = require("../db/roomStore");
 
 const START_HEARTS = 2;
 const START_TIME = 8000;         // ms, bomb time at normal speed
@@ -222,6 +223,7 @@ function endGame(io, room, winnerId){
         for (const player of room.players){
             player.spectating = false;
         }
+        store.setStatus(room.code, "lobby");
         io.to(room.code).emit("room-update", room);
     }
 

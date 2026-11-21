@@ -1,3 +1,6 @@
 node_modules/
 game/.datamuse-counts.json
 .DS_Store
+.env
+.neon
+.env.local
